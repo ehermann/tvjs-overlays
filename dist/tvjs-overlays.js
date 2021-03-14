@@ -1,5 +1,5 @@
 /*!
- * TVJS Overlays - v0.4.0 - Fri Mar 12 2021
+ * TVJS Overlays - v0.4.0 - Sun Mar 14 2021
  *     https://github.com/tvjsx/trading-vue-js
  *     Copyright (c) 2020 c451 Code's All Right;
  *     Licensed under the MIT license
@@ -1461,8 +1461,8 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
       colorSenkouSpanA: "#438625",
       colorSenkouSpanB: "#bd003c",
       colorChinkou: "#BF2A64",
-      colorKumoUp: "#063f0f",
-      colorKumoDown: "#391c19",
+      colorKumoUp: "#E5F2E5",
+      colorKumoDown: "#FFE5E5",
       showTenkan: true,
       showKijun: true,
       showSenkouSpanA: true,
@@ -1513,6 +1513,11 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
     }
   },
   methods: {
+    calc: function calc() {
+      return {
+        update: "\n                    let tenkan=ts((highest(high,9)[0]+lowest(low,9)[0])/2)\n                    let kijun=ts((highest(high,26)[0]+lowest(low,26)[0])/2)\n                    let senkouA=ts((tenkan[0]+kijun[0])/2)\n                    let senkouB=ts((highest(high,52)[0]+lowest(low,52)[0])/2)\n                    let final=ts([0,0,senkouA[0], senkouB[0],0,0,0 ])\n                    let finalOff=offset(final,26)\n                    onchart(tenkan[0],\"Tenkan\")\n                    onchart(kijun[0],\"Kijun\") \n            \n                    let chinkou=offset(high,-26)\n                    onchart(chinkou,\"Chinkou\") \n\n                    return finalOff\n                "
+      };
+    },
     meta_info: function meta_info() {
       return {
         author: "Sudeep Batra",
@@ -1528,9 +1533,10 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
       this.ctxSenkouSpanB = ctx;
       this.ctxChinkou = ctx;
       this.ctxFillKumo = ctx;
-      var subdata = this.$props.data.slice(0, propsSub.length);
-      var subdataSenkouSpan = this.$props.data.slice(0, propsSub.length + this.offset);
-      var subdataChinkou = this.$props.data.slice(0, propsSub.length - this.offset);
+      var subdata = this.$props.data;
+      var subdataSenkouSpan = this.$props.data; //.slice(0, propsSub.length + this.offset);
+
+      var subdataChinkou = this.$props.data; //.slice(0, propsSub.length - this.offset);
 
       if (this.showFillKumo) {
         this.ctxFillKumo.beginPath();
@@ -1545,6 +1551,7 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
 
             if (ind > 1) {
               var p1 = this.map_senkou_span_values(subdataSenkouSpan[ind - 1]);
+              var p1x = subdataSenkouSpan[ind - 1];
               var p2 = this.map_senkou_span_values(currItem);
               this.ctxSenkouSpanB.beginPath();
               this.ctxSenkouSpanB.moveTo(p1.x, p1.senkouSpanA);
@@ -1575,20 +1582,10 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
       if (this.showTenkan) {
         this.ctxTenkan.beginPath();
 
-        var _iterator2 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdata),
-            _step2;
-
-        try {
-          for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-            var pTenkan = _step2.value;
-            this.ctxTenkan.strokeStyle = this.tenkan_color;
-            this.ctxTenkan.lineWidth = this.tenkan_line_width;
-            this.ctxTenkan.lineTo(layout.t2screen(pTenkan[0]), layout.$2screen(pTenkan[1]));
-          }
-        } catch (err) {
-          _iterator2.e(err);
-        } finally {
-          _iterator2.f();
+        for (var i = 26; i < subdata.length; i++) {
+          this.ctxTenkan.strokeStyle = this.tenkan_color;
+          this.ctxTenkan.lineWidth = this.tenkan_line_width;
+          this.ctxTenkan.lineTo(layout.t2screen(subdata[i - 26][0]), layout.$2screen(subdata[i][1]));
         }
 
         this.ctxTenkan.stroke();
@@ -1597,20 +1594,10 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
       if (this.showKijun) {
         this.ctxKijun.beginPath();
 
-        var _iterator3 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdata),
-            _step3;
-
-        try {
-          for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-            var pKijun = _step3.value;
-            this.ctxKijun.strokeStyle = this.kijun_color;
-            this.ctxKijun.lineWidth = this.kijun_line_width;
-            this.ctxKijun.lineTo(layout.t2screen(pKijun[0]), layout.$2screen(pKijun[2]));
-          }
-        } catch (err) {
-          _iterator3.e(err);
-        } finally {
-          _iterator3.f();
+        for (var i = 26; i < subdata.length; i++) {
+          this.ctxKijun.strokeStyle = this.kijun_color;
+          this.ctxKijun.lineWidth = this.kijun_line_width;
+          this.ctxKijun.lineTo(layout.t2screen(subdata[i - 26][0]), layout.$2screen(subdata[i][2]));
         }
 
         this.ctxKijun.stroke();
@@ -1619,20 +1606,20 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
       if (this.showSenkouSpanA) {
         this.ctxSenkouSpanA.beginPath();
 
-        var _iterator4 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdataSenkouSpan),
-            _step4;
+        var _iterator2 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdataSenkouSpan),
+            _step2;
 
         try {
-          for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-            var pSenkouSpanA = _step4.value;
+          for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+            var pSenkouSpanA = _step2.value;
             this.ctxSenkouSpanA.strokeStyle = this.senkou_spanA_color;
             this.ctxSenkouSpanA.lineWidth = this.senkou_spanA_line_width;
             this.ctxSenkouSpanA.lineTo(layout.t2screen(pSenkouSpanA[0]), layout.$2screen(pSenkouSpanA[3]));
           }
         } catch (err) {
-          _iterator4.e(err);
+          _iterator2.e(err);
         } finally {
-          _iterator4.f();
+          _iterator2.f();
         }
 
         this.ctxSenkouSpanA.stroke();
@@ -1641,20 +1628,20 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
       if (this.colorSenkouSpanB) {
         this.ctxSenkouSpanB.beginPath();
 
-        var _iterator5 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdataSenkouSpan),
-            _step5;
+        var _iterator3 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdataSenkouSpan),
+            _step3;
 
         try {
-          for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-            var pSenkouSpanB = _step5.value;
+          for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+            var pSenkouSpanB = _step3.value;
             this.ctxSenkouSpanB.strokeStyle = this.senkou_spanB_color;
             this.ctxSenkouSpanB.lineWidth = this.senkou_spanB_line_width;
             this.ctxSenkouSpanB.lineTo(layout.t2screen(pSenkouSpanB[0]), layout.$2screen(pSenkouSpanB[4]));
           }
         } catch (err) {
-          _iterator5.e(err);
+          _iterator3.e(err);
         } finally {
-          _iterator5.f();
+          _iterator3.f();
         }
 
         this.ctxSenkouSpanB.stroke();
@@ -1663,20 +1650,20 @@ function Ichimokuvue_type_script_lang_js_arrayLikeToArray(arr, len) { if (len ==
       if (this.showChinkou) {
         this.ctxChinkou.beginPath();
 
-        var _iterator6 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdataChinkou),
-            _step6;
+        var _iterator4 = Ichimokuvue_type_script_lang_js_createForOfIteratorHelper(subdataChinkou),
+            _step4;
 
         try {
-          for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-            var pChikou = _step6.value;
+          for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+            var pChikou = _step4.value;
             this.ctxChinkou.strokeStyle = this.chinkou_color;
             this.ctxChinkou.lineWidth = this.chinkou_line_width;
             this.ctxChinkou.lineTo(layout.t2screen(pChikou[0]), layout.$2screen(pChikou[5]));
           }
         } catch (err) {
-          _iterator6.e(err);
+          _iterator4.e(err);
         } finally {
-          _iterator6.f();
+          _iterator4.f();
         }
 
         this.ctxChinkou.stroke();

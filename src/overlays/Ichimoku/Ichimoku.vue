@@ -29,8 +29,8 @@ export default {
             colorSenkouSpanA: "#438625",
             colorSenkouSpanB: "#bd003c",
             colorChinkou: "#BF2A64",
-            colorKumoUp: "#063f0f",
-            colorKumoDown: "#391c19",
+            colorKumoUp: "#E5F2E5",
+            colorKumoDown: "#FFE5E5",
             showTenkan: true,
             showKijun: true,
             showSenkouSpanA: true,
@@ -81,6 +81,25 @@ export default {
         },
     },
     methods: {
+        calc() {
+            return {  
+                update: `
+                    let tenkan=ts((highest(high,9)[0]+lowest(low,9)[0])/2)
+                    let kijun=ts((highest(high,26)[0]+lowest(low,26)[0])/2)
+                    let senkouA=ts((tenkan[0]+kijun[0])/2)
+                    let senkouB=ts((highest(high,52)[0]+lowest(low,52)[0])/2)
+                    let final=ts([0,0,senkouA[0], senkouB[0],0,0,0 ])
+                    let finalOff=offset(final,26)
+                    onchart(tenkan[0],"Tenkan")
+                    onchart(kijun[0],"Kijun") 
+            
+                    let chinkou=offset(high,-26)
+                    onchart(chinkou,"Chinkou") 
+
+                    return finalOff
+                `
+            }
+        },
         meta_info() {
             return {
                 author: "Sudeep Batra",
@@ -98,9 +117,9 @@ export default {
             this.ctxChinkou = ctx;
             this.ctxFillKumo = ctx;
 
-            var subdata = this.$props.data.slice(0, propsSub.length);
-            var subdataSenkouSpan = this.$props.data.slice(0, propsSub.length + this.offset);
-            var subdataChinkou = this.$props.data.slice(0, propsSub.length - this.offset);
+            var subdata = this.$props.data;
+            var subdataSenkouSpan = this.$props.data //.slice(0, propsSub.length + this.offset);
+            var subdataChinkou = this.$props.data //.slice(0, propsSub.length - this.offset);
 
             if (this.showFillKumo) {
                 this.ctxFillKumo.beginPath();
@@ -109,7 +128,9 @@ export default {
                 for (var currItem of subdataSenkouSpan) {
                     if (ind > 1) {
                         let p1 = this.map_senkou_span_values(subdataSenkouSpan[ind - 1]);
+                        let p1x = subdataSenkouSpan[ind - 1];
                         let p2 = this.map_senkou_span_values(currItem);
+                        
                         this.ctxSenkouSpanB.beginPath();
                         this.ctxSenkouSpanB.moveTo(p1.x, p1.senkouSpanA);
                         this.ctxSenkouSpanB.lineTo(p2.x + 0.1, p2.senkouSpanA);
@@ -131,11 +152,14 @@ export default {
 
             if (this.showTenkan) {
                 this.ctxTenkan.beginPath();
-
-                for (var pTenkan of subdata) {
+                for (var i = 26; i < subdata.length; i++) {
                     this.ctxTenkan.strokeStyle = this.tenkan_color;
                     this.ctxTenkan.lineWidth = this.tenkan_line_width;
-                    this.ctxTenkan.lineTo(layout.t2screen(pTenkan[0]), layout.$2screen(pTenkan[1]));
+                    this.ctxTenkan.lineTo(layout.t2screen(subdata[i-26][0]), layout.$2screen(subdata[i][1]));
+
+
+
+
                 }
 
                 this.ctxTenkan.stroke();
@@ -144,10 +168,11 @@ export default {
             if (this.showKijun) {
                 this.ctxKijun.beginPath();
 
-                for (var pKijun of subdata) {
+                for (var i = 26; i < subdata.length; i++) {
                     this.ctxKijun.strokeStyle = this.kijun_color;
                     this.ctxKijun.lineWidth = this.kijun_line_width;
-                    this.ctxKijun.lineTo(layout.t2screen(pKijun[0]), layout.$2screen(pKijun[2]));
+                    this.ctxKijun.lineTo(layout.t2screen(subdata[i-26][0]), layout.$2screen(subdata[i][2]));
+
                 }
 
                 this.ctxKijun.stroke();

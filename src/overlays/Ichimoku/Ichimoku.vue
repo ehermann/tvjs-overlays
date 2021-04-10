@@ -18,7 +18,6 @@ export default {
             senkouSpanA: [],
             senkouSpanB: [],
             chinkou: [],
-            offset: 26,
             tenkanLineWidth: 1,
             kijunLineWidth: 1,
             senkouSpanALineWidth: 1,
@@ -35,7 +34,6 @@ export default {
             showKijun: true,
             showSenkouSpanA: true,
             showSenkouSpanB: true,
-            showChinkou: true,
             showFillKumo: true
         };
     },
@@ -83,20 +81,21 @@ export default {
     methods: {
         calc() {
             return {  
+                props: {
+                    offset: { def: 26, text: 'Offset' },
+                   showChinkou: { def: 0, text: 'Show Chinkou' },
+                    showTenkan:  { def: 0, text: 'Show Tenkan' },
+            showKijun:  { def: 0, text: 'Show Kijun' },
+
+                },
                 update: `
+                    
                     let tenkan=ts((highest(high,9)[0]+lowest(low,9)[0])/2)
                     let kijun=ts((highest(high,26)[0]+lowest(low,26)[0])/2)
                     let senkouA=ts((tenkan[0]+kijun[0])/2)
                     let senkouB=ts((highest(high,52)[0]+lowest(low,52)[0])/2)
-                    let final=ts([0,0,senkouA[0], senkouB[0],0,0,0 ])
-                    let finalOff=offset(final,26)
-                    onchart(tenkan[0],"Tenkan")
-                    onchart(kijun[0],"Kijun") 
-            
-                    let chinkou=offset(high,-26)
-                    onchart(chinkou,"Chinkou") 
-
-                    return finalOff
+                    let final=ts([tenkan[0],kijun[0],senkouA[0], senkouB[0],high[0],senkouA[26], senkouB[26]])
+                    return final
                 `
             }
         },
@@ -106,56 +105,64 @@ export default {
                 version: "1.0.0"
             };
         },
+        
         draw(ctx) {
             const layout = this.$props.layout;
             const propsSub = this.$props.sub;
-
+            console.log(this);
+            console.log(ctx);
             this.ctxTenkan = ctx;
             this.ctxKijun = ctx;
             this.ctxSenkouSpanA = ctx;
             this.ctxSenkouSpanB = ctx;
             this.ctxChinkou = ctx;
             this.ctxFillKumo = ctx;
-
+            //console.log("settings");
+            //console.log(this.$props.settings);
             var subdata = this.$props.data;
-            var subdataSenkouSpan = this.$props.data //.slice(0, propsSub.length + this.offset);
-            var subdataChinkou = this.$props.data //.slice(0, propsSub.length - this.offset);
+            var chinkouOffset=2*this.sett.offset;
+            var subdataSenkouSpan = this.$props.data //.slice(0, propsSub.length + this.sett.offset);
+            var subdataChinkou = this.$props.data //.slice(0, propsSub.length - this.sett.offset);
 
-            if (this.showFillKumo) {
+            if (this.showFillKumo&&subdataSenkouSpan.length>0) {
                 this.ctxFillKumo.beginPath();
 
                 var ind = 0;
-                for (var currItem of subdataSenkouSpan) {
-                    if (ind > 1) {
-                        let p1 = this.map_senkou_span_values(subdataSenkouSpan[ind - 1]);
-                        let p1x = subdataSenkouSpan[ind - 1];
-                        let p2 = this.map_senkou_span_values(currItem);
+                var delta=0;
+              
+               
+                var pCurr=this.map_senkou_span_values(subdataSenkouSpan,-this.sett.offset);
+                var pPrev={};
+                for (var i = -this.sett.offset; i < subdataSenkouSpan.length; i++) {
+                        pPrev=pCurr;
+                        pCurr=this.map_senkou_span_values(subdataSenkouSpan,i);
+                        
                         
                         this.ctxSenkouSpanB.beginPath();
-                        this.ctxSenkouSpanB.moveTo(p1.x, p1.senkouSpanA);
-                        this.ctxSenkouSpanB.lineTo(p2.x + 0.1, p2.senkouSpanA);
-                        this.ctxSenkouSpanB.lineTo(p2.x + 0.1, p2.senkouSpanB);
-                        this.ctxSenkouSpanB.lineTo(p1.x, p1.senkouSpanB);
-                        if (p1.senkouSpanA >= p1.senkouSpanB) {
+                        this.ctxSenkouSpanB.moveTo(pPrev.x, pPrev.senkouSpanA);
+                        this.ctxSenkouSpanB.lineTo(pCurr.x + 0.1, pCurr.senkouSpanA);
+                        this.ctxSenkouSpanB.lineTo(pCurr.x + 0.1, pCurr.senkouSpanB);
+                        this.ctxSenkouSpanB.lineTo(pPrev.x, pPrev.senkouSpanB);
+                        if (pPrev.senkouSpanA >= pCurr.senkouSpanB) {
                             this.ctxSenkouSpanB.fillStyle = this.kumo_down_color;
                         } else {
                             this.ctxSenkouSpanB.fillStyle = this.kumo_up_color;
                         }
 
                         this.ctxSenkouSpanB.fill();
-                    }
+                    
 
-                    ind++;
+                    
                 }
                 this.ctxSenkouSpanB.stroke();
             }
 
-            if (this.showTenkan) {
+            if (this.sett.showTenkan) {
                 this.ctxTenkan.beginPath();
-                for (var i = 26; i < subdata.length; i++) {
+                for (var i = 0; i < subdata.length; i++) {
                     this.ctxTenkan.strokeStyle = this.tenkan_color;
                     this.ctxTenkan.lineWidth = this.tenkan_line_width;
-                    this.ctxTenkan.lineTo(layout.t2screen(subdata[i-26][0]), layout.$2screen(subdata[i][1]));
+                    this.ctxTenkan.lineTo(layout.t2screen(subdata[i][0]), layout.$2screen(subdata[i][1]));
 
 
 
@@ -165,13 +172,13 @@ export default {
                 this.ctxTenkan.stroke();
             }
 
-            if (this.showKijun) {
+            if (this.sett.showKijun) {
                 this.ctxKijun.beginPath();
 
-                for (var i = 26; i < subdata.length; i++) {
+                for (var i = 0; i < subdata.length; i++) {
                     this.ctxKijun.strokeStyle = this.kijun_color;
                     this.ctxKijun.lineWidth = this.kijun_line_width;
-                    this.ctxKijun.lineTo(layout.t2screen(subdata[i-26][0]), layout.$2screen(subdata[i][2]));
+                    this.ctxKijun.lineTo(layout.t2screen(subdata[i][0]), layout.$2screen(subdata[i][2]));
 
                 }
 
@@ -180,45 +187,86 @@ export default {
 
             if (this.showSenkouSpanA) {
                 this.ctxSenkouSpanA.beginPath();
-                for (var pSenkouSpanA of subdataSenkouSpan) {
+                for (var i = -this.sett.offset; i < subdataSenkouSpan.length; i++) {
+
                     this.ctxSenkouSpanA.strokeStyle = this.senkou_spanA_color;
                     this.ctxSenkouSpanA.lineWidth = this.senkou_spanA_line_width;
-                    this.ctxSenkouSpanA.lineTo(layout.t2screen(pSenkouSpanA[0]), layout.$2screen(pSenkouSpanA[3]));
+                 
+                    pCurr=this.map_senkou_span_values(subdataSenkouSpan,i);
+
+                    this.ctxSenkouSpanA.lineTo(pCurr.x, pCurr.senkouSpanA);
                 }
 
                 this.ctxSenkouSpanA.stroke();
             }
 
-            if (this.colorSenkouSpanB) {
+            if (this.showSenkouSpanB) {
                 this.ctxSenkouSpanB.beginPath();
-                for (var pSenkouSpanB of subdataSenkouSpan) {
+                 for (var i = -this.sett.offset; i < subdataSenkouSpan.length; i++) {
+
                     this.ctxSenkouSpanB.strokeStyle = this.senkou_spanB_color;
                     this.ctxSenkouSpanB.lineWidth = this.senkou_spanB_line_width;
-                    this.ctxSenkouSpanB.lineTo(layout.t2screen(pSenkouSpanB[0]), layout.$2screen(pSenkouSpanB[4]));
+                    pCurr=this.map_senkou_span_values(subdataSenkouSpan,i);
+
+                    this.ctxSenkouSpanB.lineTo(pCurr.x, pCurr.senkouSpanB);
+                 
                 }
 
                 this.ctxSenkouSpanB.stroke();
             }
 
-            if (this.showChinkou) {
+            if (this.sett.showChinkou!=0) {
                 this.ctxChinkou.beginPath();
-                for (var pChikou of subdataChinkou) {
-                    this.ctxChinkou.strokeStyle = this.chinkou_color;
-                    this.ctxChinkou.lineWidth = this.chinkou_line_width;
-                    this.ctxChinkou.lineTo(layout.t2screen(pChikou[0]), layout.$2screen(pChikou[5]));
+                
+                for (var i = 0; i < subdataChinkou.length-chinkouOffset; i++) {
+                    
+                 
+                       let px = layout.t2screen(subdataChinkou[i][0]);
+                    
+                        this.ctxChinkou.strokeStyle = this.chinkou_color;
+                        this.ctxChinkou.lineWidth = this.chinkou_line_width;
+                        this.ctxChinkou.lineTo(px, layout.$2screen(subdataChinkou[i+chinkouOffset][5]));
+                   
+                   
                 }
 
                 this.ctxChinkou.stroke();
             }
         },
-        map_senkou_span_values(p) {
+        map_senkou_span_values(p,i) {
             const layout = this.$props.layout;
+            let ind=i;
+            let pRes=0;
+            let sa=0;
+            let sb=0;
+            
+                if( i <p.length-this.sett.offset) {
+                    ind=i + this.sett.offset;
 
+                    pRes=layout.t2screen(p[ind][0])
+                }else if(i>1)
+                {
+                    let last=p.length;
+                    pRes=layout.t2screen(p[i][0])
+                    let delta=layout.t2screen(p[p.length-1][0])-layout.t2screen(p[p.length-2][0]);
+                    
+                    pRes=pRes+delta*this.sett.offset;
+
+                }
+            if(i<0) {
+                 if (i>=p.length)
+                        ind=p.length-1;
+                sa=layout.$2screen(p[ind][6]),
+                sb= layout.$2screen(p[ind][7])
+            }else{
+                sa=layout.$2screen(p[i][3]),
+                sb= layout.$2screen(p[i][4])
+            }
             return (
                 p && {
-                    x: layout.t2screen(p[0]),
-                    senkouSpanA: layout.$2screen(p[3]),
-                    senkouSpanB: layout.$2screen(p[4])
+                    x: pRes,
+                    senkouSpanA:sa,
+                    senkouSpanB: sb,
                 }
             );
         },
